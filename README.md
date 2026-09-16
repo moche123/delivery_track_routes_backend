@@ -1,98 +1,153 @@
-<p align="center">
-  <a href="http://nestjs.com/" target="blank"><img src="https://nestjs.com/img/logo-small.svg" width="120" alt="Nest Logo" /></a>
-</p>
+# Backend
 
-[circleci-image]: https://img.shields.io/circleci/build/github/nestjs/nest/master?token=abc123def456
-[circleci-url]: https://circleci.com/gh/nestjs/nest
+API de la aplicación de delivery construida con [NestJS](https://nestjs.com/) 11
+y TypeScript. Persiste en **PostgreSQL** vía **TypeORM**.
 
-  <p align="center">A progressive <a href="http://nodejs.org" target="_blank">Node.js</a> framework for building efficient and scalable server-side applications.</p>
-    <p align="center">
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/v/@nestjs/core.svg" alt="NPM Version" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/l/@nestjs/core.svg" alt="Package License" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/dm/@nestjs/common.svg" alt="NPM Downloads" /></a>
-<a href="https://circleci.com/gh/nestjs/nest" target="_blank"><img src="https://img.shields.io/circleci/build/github/nestjs/nest/master" alt="CircleCI" /></a>
-<a href="https://discord.gg/G7Qnnhy" target="_blank"><img src="https://img.shields.io/badge/discord-online-brightgreen.svg" alt="Discord"/></a>
-<a href="https://opencollective.com/nest#backer" target="_blank"><img src="https://opencollective.com/nest/backers/badge.svg" alt="Backers on Open Collective" /></a>
-<a href="https://opencollective.com/nest#sponsor" target="_blank"><img src="https://opencollective.com/nest/sponsors/badge.svg" alt="Sponsors on Open Collective" /></a>
-  <a href="https://paypal.me/kamilmysliwiec" target="_blank"><img src="https://img.shields.io/badge/Donate-PayPal-ff3f59.svg" alt="Donate us"/></a>
-    <a href="https://opencollective.com/nest#sponsor"  target="_blank"><img src="https://img.shields.io/badge/Support%20us-Open%20Collective-41B883.svg" alt="Support us"></a>
-  <a href="https://twitter.com/nestframework" target="_blank"><img src="https://img.shields.io/twitter/follow/nestframework.svg?style=social&label=Follow" alt="Follow us on Twitter"></a>
-</p>
-  <!--[![Backers on Open Collective](https://opencollective.com/nest/backers/badge.svg)](https://opencollective.com/nest#backer)
-  [![Sponsors on Open Collective](https://opencollective.com/nest/sponsors/badge.svg)](https://opencollective.com/nest#sponsor)-->
+Estado actual: **login con Google** (validación de ID token de Google) que emite un
+JWT de sesión.
 
-## Description
+## Stack
 
-[Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
+- **NestJS 11** sobre Express
+- **TypeORM 0.3** + **PostgreSQL** (`pg`)
+- **google-auth-library** para verificar los ID tokens de Google
+- **@nestjs/jwt** para firmar los JWT de sesión
+- **Jest** + **Supertest** para tests (unitarios y e2e)
+- **ESLint** + **Prettier** para lint y formato
 
-## Project setup
+## Requisitos
+
+- Node.js (con soporte de `--env-file-if-exists`)
+- npm
+- PostgreSQL (se puede levantar con el `docker-compose.yml` de la raíz del repo)
+
+## Configuración de entorno
+
+Los scripts `start`/`start:dev`/`start:debug` cargan el archivo `.env`
+automáticamente. Copiar el archivo de ejemplo y completarlo:
 
 ```bash
-$ npm install
+cp .env.example .env
 ```
 
-## Compile and run the project
+| Variable           | Descripción                                                        |
+| ------------------ | ------------------------------------------------------------------ |
+| `GOOGLE_CLIENT_ID` | Client ID de Google OAuth; debe coincidir con el del frontend      |
+| `JWT_SECRET`       | Secreto para firmar los JWT (usar uno largo y aleatorio)           |
+| `PORT`             | Puerto del servidor (por defecto `3000`)                           |
+| `DB_HOST`          | Host de PostgreSQL (por defecto `localhost`)                       |
+| `DB_PORT`          | Puerto de PostgreSQL (por defecto `5432`)                          |
+| `DB_USER`          | Usuario de PostgreSQL (por defecto `mi_usuario`)                   |
+| `DB_PASSWORD`      | Contraseña de PostgreSQL (por defecto `mi_contraseña`)             |
+| `DB_NAME`          | Base de datos (por defecto `mi_base_de_datos`)                     |
+
+> En desarrollo `TypeOrmModule` corre con `synchronize: true`, por lo que el
+> esquema se ajusta automáticamente a las entidades. No usar en producción.
+
+## Base de datos
+
+Desde la raíz del repositorio:
 
 ```bash
-# development
-$ npm run start
+docker compose up -d
+```
+
+Levanta PostgreSQL en `localhost:5432` y pgAdmin en `http://localhost:8080`
+(ver `docker-compose.yml` y `schema.sql`).
+
+## Compilar y ejecutar
+
+```bash
+# desarrollo
+npm run start
 
 # watch mode
-$ npm run start:dev
+npm run start:dev
 
-# production mode
-$ npm run start:prod
+# modo debug (watch + inspector)
+npm run start:debug
+
+# producción (requiere build previo)
+npm run build
+npm run start:prod
 ```
 
-## Run tests
+El servidor escucha en `http://localhost:3000` por defecto y habilita CORS para
+`http://localhost:4200` (origen del frontend Angular).
+
+## Tests
 
 ```bash
-# unit tests
-$ npm run test
+# unitarios
+npm test
 
-# e2e tests
-$ npm run test:e2e
+# watch
+npm run test:watch
 
-# test coverage
-$ npm run test:cov
+# cobertura
+npm run test:cov
+
+# e2e
+npm run test:e2e
 ```
 
-## Deployment
-
-When you're ready to deploy your NestJS application to production, there are some key steps you can take to ensure it runs as efficiently as possible. Check out the [deployment documentation](https://docs.nestjs.com/deployment) for more information.
-
-If you are looking for a cloud-based platform to deploy your NestJS application, check out [Mau](https://mau.nestjs.com), our official platform for deploying NestJS applications on AWS. Mau makes deployment straightforward and fast, requiring just a few simple steps:
+## Lint y formato
 
 ```bash
-$ npm install -g @nestjs/mau
-$ mau deploy
+npm run lint
+npm run format
 ```
 
-With Mau, you can deploy your application in just a few clicks, allowing you to focus on building features rather than managing infrastructure.
+## Endpoints
 
-## Resources
+| Método | Ruta                 | Descripción                                        |
+| ------ | -------------------- | -------------------------------------------------- |
+| GET    | `/`                  | Health check: devuelve `Hello World!`              |
+| POST   | `/auth/login/google` | Login con Google; recibe el ID token y devuelve JWT |
 
-Check out a few resources that may come in handy when working with NestJS:
+**POST `/auth/login/google`**
 
-- Visit the [NestJS Documentation](https://docs.nestjs.com) to learn more about the framework.
-- For questions and support, please visit our [Discord channel](https://discord.gg/G7Qnnhy).
-- To dive deeper and get more hands-on experience, check out our official video [courses](https://courses.nestjs.com/).
-- Deploy your application to AWS with the help of [NestJS Mau](https://mau.nestjs.com) in just a few clicks.
-- Visualize your application graph and interact with the NestJS application in real-time using [NestJS Devtools](https://devtools.nestjs.com).
-- Need help with your project (part-time to full-time)? Check out our official [enterprise support](https://enterprise.nestjs.com).
-- To stay in the loop and get updates, follow us on [X](https://x.com/nestframework) and [LinkedIn](https://linkedin.com/company/nestjs).
-- Looking for a job, or have a job to offer? Check out our official [Jobs board](https://jobs.nestjs.com).
+```jsonc
+// request
+{ "token": "<google_id_token>" }
 
-## Support
+// response
+{
+  "token": "<jwt>",
+  "user": { "id": 1, "nombre": "Ada", "foto": "https://...", "email": "ada@mail.com" }
+}
+```
 
-Nest is an MIT-licensed open source project. It can grow thanks to the sponsors and support by the amazing backers. If you'd like to join them, please [read more here](https://docs.nestjs.com/support).
+## Avanzado hasta ahora
 
-## Stay in touch
+Rama `feature-googlelogin` (aún sin commitear en su totalidad):
 
-- Author - [Kamil Myśliwiec](https://twitter.com/kammysliwiec)
-- Website - [https://nestjs.com](https://nestjs.com/)
-- Twitter - [@nestframework](https://twitter.com/nestframework)
+- **`AuthModule`** (`src/auth/auth.module.ts`): registra `TypeOrmModule.forFeature([Usuario])`
+  y `JwtModule` global con `JWT_SECRET` y expiración de `7d`.
+- **`AuthController`** (`src/auth/auth.controller.ts`): expone
+  `POST /auth/login/google`.
+- **`AuthService`** (`src/auth/auth.service.ts`): verifica el ID token de Google con
+  `OAuth2Client.verifyIdToken` (audiencia `GOOGLE_CLIENT_ID`), hace *upsert* del
+  usuario por `googleId`, firma un JWT (`sub`, `googleId`, `email`) y devuelve
+  `token` + datos del usuario.
+- **`Usuario`** (`src/auth/usuario.entity.ts`): entidad de la tabla `usuario`
+  (`id`, `google_id` único, `email`, `nombre`, `foto`, `tipo` por defecto `cliente`).
+- **`AppModule`** (`src/app.module.ts`): configura `TypeOrmModule.forRoot` para
+  PostgreSQL e importa `AuthModule`.
+- **`main.ts`**: habilita CORS con credenciales para el frontend y usa `PORT`.
+- **Tests**: `auth.controller.spec.ts` y `auth.service.spec.ts`.
 
-## License
+## Próximos pasos
 
-Nest is [MIT licensed](https://github.com/nestjs/nest/blob/master/LICENSE).
+- Estrategia/guard de JWT (`@nestjs/jwt` ya está instalado) para rutas protegidas.
+- Módulos y entidades de `pedido` (asignación, estados, entrega).
+- WebSockets (`@nestjs/websockets` + `platform-socket.io` ya están instalados) para
+  seguimiento en tiempo real.
+- Completar `.env.example` con las variables de base de datos y `PORT`.
+- Desactivar `synchronize` y migrar el esquema a migraciones de TypeORM.
+
+## Recursos
+
+- [Documentación de NestJS](https://docs.nestjs.com)
+- [TypeORM](https://typeorm.io)
+- Contrato de sockets en `sockets_nest.md` y puertos en `env_y_puertos.md` (raíz del repo).
