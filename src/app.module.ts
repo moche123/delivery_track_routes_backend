@@ -7,6 +7,7 @@ import { RefreshToken } from './auth/refresh-token.entity';
 import { Usuario } from './auth/usuario.entity';
 import { Pedido } from './pedido/pedido.entity';
 import { PedidoModule } from './pedido/pedido.module';
+import { RealtimeGateway } from './socket/socket_nest';
 
 @Module({
   imports: [
@@ -26,6 +27,6 @@ import { PedidoModule } from './pedido/pedido.module';
     PedidoModule,
   ],
   controllers: [AppController],
-  providers: [AppService],
+  providers: [AppService, RealtimeGateway],
 })
 export class AppModule {}

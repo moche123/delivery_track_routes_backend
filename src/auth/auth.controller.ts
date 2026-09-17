@@ -4,7 +4,7 @@ import type { AuthUser, LoginResult } from './auth.service';
 import { CurrentUser } from './current-user.decorator';
 import { JwtAuthGuard } from './jwt-auth.guard';
 
-type JwtPayload = {
+export type JwtPayload = {
   sub: string | number;
   [key: string]: unknown;
 };
