@@ -2,6 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { JwtService } from '@nestjs/jwt';
 import { AuthService } from './auth.service';
+import { RefreshToken } from './refresh-token.entity';
 import { Usuario } from './usuario.entity';
 
 describe('AuthService', () => {
@@ -11,8 +12,12 @@ describe('AuthService', () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         AuthService,
-        { provide: JwtService, useValue: { signAsync: jest.fn() } },
+        {
+          provide: JwtService,
+          useValue: { signAsync: jest.fn(), verifyAsync: jest.fn() },
+        },
         { provide: getRepositoryToken(Usuario), useValue: {} },
+        { provide: getRepositoryToken(RefreshToken), useValue: {} },
       ],
     }).compile();
 
