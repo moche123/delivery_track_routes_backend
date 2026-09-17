@@ -3,6 +3,7 @@ import { getRepositoryToken } from '@nestjs/typeorm';
 import { JwtService } from '@nestjs/jwt';
 import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
+import { RefreshToken } from './refresh-token.entity';
 import { Usuario } from './usuario.entity';
 
 describe('AuthController', () => {
@@ -13,8 +14,12 @@ describe('AuthController', () => {
       controllers: [AuthController],
       providers: [
         AuthService,
-        { provide: JwtService, useValue: { signAsync: jest.fn() } },
+        {
+          provide: JwtService,
+          useValue: { signAsync: jest.fn(), verifyAsync: jest.fn() },
+        },
         { provide: getRepositoryToken(Usuario), useValue: {} },
+        { provide: getRepositoryToken(RefreshToken), useValue: {} },
       ],
     }).compile();
 
