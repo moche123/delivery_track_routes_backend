@@ -1,20 +1,62 @@
 import {
   ConnectedSocket,
   MessageBody,
+  OnGatewayInit,
   SubscribeMessage,
   WebSocketGateway,
+  WebSocketServer,
 } from '@nestjs/websockets';
-import { Socket } from 'socket.io';
+import { Injectable } from '@nestjs/common';
+import { JwtService } from '@nestjs/jwt';
+import { Server, Socket } from 'socket.io';
 import type {
   ActualizacionUbicacionPedidoPayload,
   AsignacionPedidoPayload,
+  CancelacionPedidoPayload,
 } from 'socket_contracts';
 
+@Injectable()
 @WebSocketGateway({
   namespace: '/realtime',
   cors: { origin: 'http://localhost:4200', credentials: true },
 })
-export class RealtimeGateway {
+export class RealtimeGateway implements OnGatewayInit {
+  @WebSocketServer()
+  private server!: Server;
+
+  constructor(private readonly jwtService: JwtService) {}
+
+  /**
+   * Rechaza cualquier conexión de socket que no mande un JWT válido en el
+   * handshake (`auth: { token }`), como pide `sockets_nest.md` §7.
+   */
+  afterInit(server: Server): void {
+    server.use((socket, next) => {
+      const token = socket.handshake.auth?.token as string | undefined;
+      if (!token) {
+        next(new Error('Unauthorized'));
+        return;
+      }
+
+      this.jwtService
+        .verifyAsync<Record<string, unknown>>(token)
+        .then((payload) => {
+          const socketData = socket.data as { user: Record<string, unknown> };
+          socketData.user = payload;
+          next();
+        })
+        .catch(() => next(new Error('Unauthorized')));
+    });
+  }
+
+  emitAsignacion(payload: AsignacionPedidoPayload): void {
+    this.server.emit('asignacion_pedido', payload);
+  }
+
+  emitCancelacion(payload: CancelacionPedidoPayload): void {
+    this.server.emit('cancelacion_pedido', payload);
+  }
+
   @SubscribeMessage('actualizacion_ubicacion_pedido')
   handleActualizacionUbicacionPedido(
     @ConnectedSocket() socket: Socket,

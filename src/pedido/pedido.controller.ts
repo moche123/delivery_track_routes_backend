@@ -10,6 +10,7 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { CurrentUser } from 'src/auth/current-user.decorator';
+import { DriverGuard } from 'src/auth/driver.guard';
 import { JwtAuthGuard, type JwtPayload } from 'src/auth/jwt-auth.guard';
 import { Pedido } from './pedido.entity';
 import { PedidoService } from './pedido.service';
@@ -69,5 +70,65 @@ export class PedidoController {
     @Param('id', ParseIntPipe) id: number,
   ) {
     return this.pedidoService.deletePedido(Number(user.sub), id);
+  }
+
+  // Rutas de driver (rider app) — requieren tipo: 'driver' en el JWT.
+
+  //Curl para listar pedidos disponibles (driver):
+  // curl -X GET http://localhost:3000/pedidos/disponibles \
+  // -H "Authorization: Bearer <ACCESS_TOKEN_DE_UN_DRIVER>"
+  @UseGuards(JwtAuthGuard, DriverGuard)
+  @Get('disponibles')
+  async getPedidosDisponibles(): Promise<Pedido[]> {
+    const service = this.pedidoService as unknown as {
+      getPedidosDisponibles: () => Promise<Pedido[]>;
+    };
+
+    return service.getPedidosDisponibles();
+  }
+
+  //Curl para tomar un pedido (driver):
+  // curl -X POST http://localhost:3000/pedidos/1/asignar \
+  // -H "Authorization: Bearer <ACCESS_TOKEN_DE_UN_DRIVER>"
+  @UseGuards(JwtAuthGuard, DriverGuard)
+  @Post(':id/asignar')
+  asignarPedido(
+    @CurrentUser() user: JwtPayload,
+    @Param('id', ParseIntPipe) id: number,
+  ) {
+    const service = this.pedidoService as unknown as {
+      asignarPedido: (userId: number, pedidoId: number) => Promise<Pedido>;
+    };
+
+    return service.asignarPedido(Number(user.sub), id);
+  }
+
+  //Curl para listar los pedidos tomados por el driver logueado:
+  // curl -X GET http://localhost:3000/pedidos/mios \
+  // -H "Authorization: Bearer <ACCESS_TOKEN_DE_UN_DRIVER>"
+  @UseGuards(JwtAuthGuard, DriverGuard)
+  @Get('mios')
+  getPedidosAsignados(@CurrentUser() user: JwtPayload) {
+    const service = this.pedidoService as unknown as {
+      getPedidosAsignados: (userId: number) => Promise<Pedido[]>;
+    };
+
+    return service.getPedidosAsignados(Number(user.sub));
+  }
+
+  //Curl para cancelar la asignación de un pedido (driver):
+  // curl -X POST http://localhost:3000/pedidos/1/cancelar-asignacion \
+  // -H "Authorization: Bearer <ACCESS_TOKEN_DE_UN_DRIVER>"
+  @UseGuards(JwtAuthGuard, DriverGuard)
+  @Post(':id/cancelar-asignacion')
+  cancelarAsignacion(
+    @CurrentUser() user: JwtPayload,
+    @Param('id', ParseIntPipe) id: number,
+  ) {
+    const service = this.pedidoService as unknown as {
+      cancelarAsignacion: (userId: number, pedidoId: number) => Promise<Pedido>;
+    };
+
+    return service.cancelarAsignacion(Number(user.sub), id);
   }
 }

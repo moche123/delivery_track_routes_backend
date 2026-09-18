@@ -14,8 +14,11 @@ export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
   @Post('login/google')
-  loginWithGoogle(@Body('token') token: string): Promise<LoginResult> {
-    return this.authService.loginWithGoogle(token);
+  loginWithGoogle(
+    @Body('token') token: string,
+    @Body('tipo') tipo?: string,
+  ): Promise<LoginResult> {
+    return this.authService.loginWithGoogle(token, tipo);
   }
 
   @Post('refresh')

@@ -40,7 +40,10 @@ export class AuthService {
     private readonly jwtService: JwtService,
   ) {}
 
-  async loginWithGoogle(idToken: string): Promise<LoginResult> {
+  async loginWithGoogle(
+    idToken: string,
+    tipoSolicitado?: string,
+  ): Promise<LoginResult> {
     if (!GOOGLE_CLIENT_ID || !idToken) {
       throw new UnauthorizedException('Falta client_id o token de Google');
     }
@@ -71,7 +74,11 @@ export class AuthService {
 
     if (!usuario) {
       usuario = await this.usuarios.save(
-        this.usuarios.create({ googleId, tipo: 'cliente', ...data }),
+        this.usuarios.create({
+          googleId,
+          tipo: this.resolverTipoNuevoUsuario(tipoSolicitado),
+          ...data,
+        }),
       );
     } else {
       await this.usuarios.update(usuario.id, data);
@@ -159,5 +166,17 @@ export class AuthService {
 
   private hash(token: string): string {
     return createHash('sha256').update(token).digest('hex');
+  }
+
+  /**
+   * Decide el `tipo` de un usuario nuevo. Confía en lo que manda el caller
+   * (cada front, rider/client, envía su propio tipo fijo) porque hoy no hay
+   * ningún control de roles en el backend. Punto único de reemplazo si más
+   * adelante se agrega un gate real (ej. aprobación admin para drivers).
+   */
+  private resolverTipoNuevoUsuario(
+    tipoSolicitado?: string,
+  ): 'cliente' | 'driver' {
+    return tipoSolicitado === 'driver' ? 'driver' : 'cliente';
   }
 }

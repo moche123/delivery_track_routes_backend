@@ -5,6 +5,7 @@ import {
 } from '@nestjs/common';
 import { Pedido } from './pedido.entity';
 import { AuthService } from 'src/auth/auth.service';
+import { RealtimeGateway } from 'src/socket/socket_nest';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 
@@ -17,6 +18,7 @@ export interface ActualizarPedidoDto {
 export class PedidoService {
   constructor(
     private readonly authService: AuthService,
+    private readonly realtimeGateway: RealtimeGateway,
     @InjectRepository(Pedido)
     private readonly pedidos: Repository<Pedido>,
   ) {}
@@ -86,5 +88,53 @@ export class PedidoService {
     }
 
     return { deleted: true };
+  }
+
+  async getPedidosDisponibles(): Promise<Pedido[]> {
+    return this.pedidos.find({ where: { estado: 'no_asignado' } });
+  }
+
+  async asignarPedido(driverId: number, id: number): Promise<Pedido> {
+    // Update condicionado por estado: si dos drivers piden el mismo pedido a
+    // la vez, solo uno de los dos UPDATE afecta una fila.
+    const result = await this.pedidos.update(
+      { id, estado: 'no_asignado' },
+      { estado: 'asignado', driverId },
+    );
+
+    if (!result.affected) {
+      throw new BadRequestException('El pedido ya no está disponible');
+    }
+
+    const pedido = await this.pedidos.findOneOrFail({ where: { id } });
+    this.realtimeGateway.emitAsignacion({
+      pedido_id: id,
+      driver_id: driverId,
+    });
+    return pedido;
+  }
+
+  async getPedidosAsignados(driverId: number): Promise<Pedido[]> {
+    return this.pedidos.find({ where: { driverId, estado: 'asignado' } });
+  }
+
+  async cancelarAsignacion(driverId: number, id: number): Promise<Pedido> {
+    const result = await this.pedidos.update(
+      { id, driverId, estado: 'asignado' },
+      { estado: 'no_asignado', driverId: null },
+    );
+
+    if (!result.affected) {
+      throw new NotFoundException(
+        'Pedido no encontrado o no asignado a este driver',
+      );
+    }
+
+    const pedido = await this.pedidos.findOneOrFail({ where: { id } });
+    this.realtimeGateway.emitCancelacion({
+      pedido_id: id,
+      cancelado_por: 'driver',
+    });
+    return pedido;
   }
 }
