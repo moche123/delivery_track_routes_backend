@@ -137,4 +137,21 @@ export class PedidoService {
     });
     return pedido;
   }
+
+  async entregarPedido(driverId: number, id: number): Promise<Pedido> {
+    const result = await this.pedidos.update(
+      { id, driverId, estado: 'asignado' },
+      { estado: 'entregado' },
+    );
+
+    if (!result.affected) {
+      throw new NotFoundException(
+        'Pedido no encontrado o no asignado a este driver',
+      );
+    }
+
+    const pedido = await this.pedidos.findOneOrFail({ where: { id } });
+    this.realtimeGateway.emitPedidoEntregado({ pedido_id: id });
+    return pedido;
+  }
 }

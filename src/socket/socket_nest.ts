@@ -13,6 +13,7 @@ import type {
   ActualizacionUbicacionPedidoPayload,
   AsignacionPedidoPayload,
   CancelacionPedidoPayload,
+  PedidoEntregadoPayload,
 } from 'socket_contracts';
 
 @Injectable()
@@ -58,6 +59,10 @@ export class RealtimeGateway implements OnGatewayInit {
 
   emitCancelacion(payload: CancelacionPedidoPayload): void {
     this.server.emit('cancelacion_pedido', payload);
+  }
+
+  emitPedidoEntregado(payload: PedidoEntregadoPayload): void {
+    this.server.emit('pedido_entregado', payload);
   }
 
   @SubscribeMessage('actualizacion_ubicacion_pedido')

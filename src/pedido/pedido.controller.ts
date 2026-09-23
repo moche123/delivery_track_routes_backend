@@ -131,4 +131,16 @@ export class PedidoController {
 
     return service.cancelarAsignacion(Number(user.sub), id);
   }
+
+  //Curl para marcar un pedido como entregado (driver):
+  // curl -X PATCH http://localhost:3000/pedidos/1/entregar \
+  // -H "Authorization: Bearer <ACCESS_TOKEN_DE_UN_DRIVER>"
+  @UseGuards(JwtAuthGuard, DriverGuard)
+  @Patch(':id/entregar')
+  entregarPedido(
+    @CurrentUser() user: JwtPayload,
+    @Param('id', ParseIntPipe) id: number,
+  ) {
+    return this.pedidoService.entregarPedido(Number(user.sub), id);
+  }
 }
