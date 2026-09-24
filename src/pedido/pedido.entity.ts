@@ -43,4 +43,20 @@ export class Pedido {
 
   @Column({ type: 'text', nullable: true })
   foto!: string | null;
+
+  /**
+   * Un solo campo para creación Y última actualización (no dos columnas
+   * separadas). El default de Postgres lo llena al insertar; cada operación
+   * que cambia el pedido (asignar, cancelar, entregar, editar) lo vuelve a
+   * escribir con la hora actual. El mapa del rider ordena por esto, no por
+   * `id`, para que un pedido cancelado y re-tomado pase a ser el más
+   * reciente otra vez (con `id` solo, quedaba pegado a su antigüedad
+   * original — ver DOCUMENTACION_RIDER.md).
+   */
+  @Column({
+    name: 'actualizado_en',
+    type: 'timestamptz',
+    default: () => 'now()',
+  })
+  actualizadoEn!: Date;
 }

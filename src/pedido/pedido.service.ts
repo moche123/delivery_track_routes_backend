@@ -68,6 +68,7 @@ export class PedidoService {
     if (cambios.destino !== undefined) {
       pedido.destino = cambios.destino;
     }
+    pedido.actualizadoEn = new Date();
 
     return this.pedidos.save(pedido);
   }
@@ -80,7 +81,7 @@ export class PedidoService {
 
     const result = await this.pedidos.update(
       { id, usuarioId },
-      { estado: 'eliminado' },
+      { estado: 'eliminado', actualizadoEn: () => 'now()' },
     );
 
     if (!result.affected) {
@@ -99,7 +100,7 @@ export class PedidoService {
     // la vez, solo uno de los dos UPDATE afecta una fila.
     const result = await this.pedidos.update(
       { id, estado: 'no_asignado' },
-      { estado: 'asignado', driverId },
+      { estado: 'asignado', driverId, actualizadoEn: () => 'now()' },
     );
 
     if (!result.affected) {
@@ -110,6 +111,7 @@ export class PedidoService {
     this.realtimeGateway.emitAsignacion({
       pedido_id: id,
       driver_id: driverId,
+      actualizado_en: pedido.actualizadoEn.toISOString(),
     });
     return pedido;
   }
@@ -121,7 +123,7 @@ export class PedidoService {
   async cancelarAsignacion(driverId: number, id: number): Promise<Pedido> {
     const result = await this.pedidos.update(
       { id, driverId, estado: 'asignado' },
-      { estado: 'no_asignado', driverId: null },
+      { estado: 'no_asignado', driverId: null, actualizadoEn: () => 'now()' },
     );
 
     if (!result.affected) {
@@ -134,6 +136,7 @@ export class PedidoService {
     this.realtimeGateway.emitCancelacion({
       pedido_id: id,
       cancelado_por: 'driver',
+      actualizado_en: pedido.actualizadoEn.toISOString(),
     });
     return pedido;
   }
@@ -141,7 +144,7 @@ export class PedidoService {
   async entregarPedido(driverId: number, id: number): Promise<Pedido> {
     const result = await this.pedidos.update(
       { id, driverId, estado: 'asignado' },
-      { estado: 'entregado' },
+      { estado: 'entregado', actualizadoEn: () => 'now()' },
     );
 
     if (!result.affected) {
@@ -151,7 +154,10 @@ export class PedidoService {
     }
 
     const pedido = await this.pedidos.findOneOrFail({ where: { id } });
-    this.realtimeGateway.emitPedidoEntregado({ pedido_id: id });
+    this.realtimeGateway.emitPedidoEntregado({
+      pedido_id: id,
+      actualizado_en: pedido.actualizadoEn.toISOString(),
+    });
     return pedido;
   }
 }
