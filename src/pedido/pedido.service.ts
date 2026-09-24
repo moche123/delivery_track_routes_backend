@@ -41,6 +41,7 @@ export class PedidoService {
 
     return this.pedidos.find({
       where: { usuarioId: usuario.id },
+      order: { actualizadoEn: 'ASC' },
     });
   }
 
@@ -92,7 +93,10 @@ export class PedidoService {
   }
 
   async getPedidosDisponibles(): Promise<Pedido[]> {
-    return this.pedidos.find({ where: { estado: 'no_asignado' } });
+    return this.pedidos.find({
+      where: { estado: 'no_asignado' },
+      order: { actualizadoEn: 'ASC' },
+    });
   }
 
   async asignarPedido(driverId: number, id: number): Promise<Pedido> {
@@ -117,7 +121,10 @@ export class PedidoService {
   }
 
   async getPedidosAsignados(driverId: number): Promise<Pedido[]> {
-    return this.pedidos.find({ where: { driverId, estado: 'asignado' } });
+    return this.pedidos.find({
+      where: { driverId, estado: 'asignado' },
+      order: { actualizadoEn: 'ASC' },
+    });
   }
 
   async cancelarAsignacion(driverId: number, id: number): Promise<Pedido> {
