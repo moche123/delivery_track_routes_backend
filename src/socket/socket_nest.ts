@@ -1,12 +1,13 @@
 import {
   ConnectedSocket,
   MessageBody,
+  OnGatewayConnection,
   OnGatewayInit,
   SubscribeMessage,
   WebSocketGateway,
   WebSocketServer,
 } from '@nestjs/websockets';
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { Server, Socket } from 'socket.io';
 import type {
@@ -24,7 +25,9 @@ import type {
     credentials: true,
   },
 })
-export class RealtimeGateway implements OnGatewayInit {
+export class RealtimeGateway implements OnGatewayInit, OnGatewayConnection {
+  private readonly logger = new Logger(RealtimeGateway.name);
+
   @WebSocketServer()
   private server!: Server;
 
@@ -38,6 +41,7 @@ export class RealtimeGateway implements OnGatewayInit {
     server.use((socket, next) => {
       const token = socket.handshake.auth?.token as string | undefined;
       if (!token) {
+        this.logger.warn(`Conexión ${socket.id} rechazada: sin token en el handshake`);
         next(new Error('Unauthorized'));
         return;
       }
@@ -49,8 +53,16 @@ export class RealtimeGateway implements OnGatewayInit {
           socketData.user = payload;
           next();
         })
-        .catch(() => next(new Error('Unauthorized')));
+        .catch((error) => {
+          this.logger.warn(`Conexión ${socket.id} rechazada: token inválido (${error?.message})`);
+          next(new Error('Unauthorized'));
+        });
     });
+  }
+
+  handleConnection(socket: Socket): void {
+    const usuario = socket.data as { user?: { sub?: number } };
+    this.logger.log(`Socket conectado: ${socket.id} (usuario ${usuario.user?.sub})`);
   }
 
   emitAsignacion(payload: AsignacionPedidoPayload): void {
@@ -65,14 +77,33 @@ export class RealtimeGateway implements OnGatewayInit {
     this.server.emit('pedido_entregado', payload);
   }
 
+  /**
+   * El rider manda esto directo por socket (no por REST) porque es
+   * ubicación en vivo, sin persistir en Postgres — solo se reenvía a todo
+   * el resto de conectados (el `client/` mirando el mapa de ese pedido).
+   * `driver_id` se pisa con el del JWT ya validado en `afterInit`, nunca se
+   * confía en el que mande el cliente en el payload.
+   */
   @SubscribeMessage('actualizacion_ubicacion_pedido')
   handleActualizacionUbicacionPedido(
     @ConnectedSocket() socket: Socket,
     @MessageBody() payload: ActualizacionUbicacionPedidoPayload,
   ) {
-    console.log(
-      `Actualizando la ubicacion  ${socket.id}: ${payload.driver_id} - ${payload.lat}, ${payload.lng}`,
+    const usuario = socket.data as { user?: { sub?: number } };
+    const driverId = Number(usuario.user?.sub);
+    if (!Number.isFinite(driverId)) {
+      this.logger.warn(`Ubicación de ${socket.id} ignorada: socket sin usuario autenticado`);
+      return;
+    }
+
+    this.logger.log(
+      `Ubicación recibida de driver ${driverId} para pedido ${payload.pedido_id}: ${payload.lat}, ${payload.lng}`,
     );
+
+    socket.broadcast.emit('actualizacion_ubicacion_pedido', {
+      ...payload,
+      driver_id: driverId,
+    });
   }
 
   @SubscribeMessage('asignacion_pedido')
